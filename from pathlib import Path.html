@@ -1,0 +1,239 @@
+from pathlib import Path
+
+html = r'''<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reverse Master — Coding Game</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Arial,"Noto Sans Arabic",sans-serif;color:#fff;
+background:linear-gradient(135deg,#0f172a,#312e81,#065f46);display:flex;justify-content:center;align-items:center;padding:18px}
+.app{width:min(820px,100%);background:rgba(255,255,255,.11);backdrop-filter:blur(16px);
+border:1px solid rgba(255,255,255,.2);border-radius:28px;padding:24px;box-shadow:0 25px 70px #0008}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:34px}.tag{opacity:.8;margin:5px 0 20px}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+button{border:0;border-radius:12px;padding:11px 16px;font-weight:700;cursor:pointer;background:#4f46e5;color:white}
+button:hover{transform:translateY(-2px);filter:brightness(1.08)}
+.green{background:#059669}.red{background:#dc2626}.gray{background:#475569}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin:18px 0}
+.stat{background:#0003;border-radius:15px;text-align:center;padding:9px}.stat span{display:block;font-size:13px;opacity:.75}.stat b{font-size:22px}
+.bar{height:9px;background:#0004;border-radius:99px;overflow:hidden;margin:10px 0 20px}
+#timebar{height:100%;width:100%;background:#22c55e;transition:width .2s}
+.game{background:#fff;color:#111827;border-radius:22px;padding:24px;text-align:center}
+.level{font-weight:800;color:#4f46e5}
+.word{direction:ltr;font-size:clamp(30px,7vw,58px);font-weight:900;min-height:72px;display:flex;align-items:center;justify-content:center;margin:12px 0}
+input{width:100%;padding:15px;border:2px solid #d1d5db;border-radius:13px;font-size:20px;text-align:center;direction:ltr;outline:none}
+input:focus{border-color:#6366f1}
+.actions{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:13px}
+#message{min-height:31px;font-weight:800;font-size:18px;margin-top:13px}
+.tip{font-size:13px;opacity:.65;margin-top:16px}
+.overlay{position:fixed;inset:0;background:#020617dd;display:none;align-items:center;justify-content:center;padding:20px;z-index:5}
+.modal{background:#fff;color:#111827;border-radius:25px;padding:30px;text-align:center;width:min(450px,100%)}
+.modal h2{font-size:32px;margin:0 0 10px}.modal p{font-size:19px}
+@media(max-width:600px){.stats{grid-template-columns:repeat(3,1fr)}h1{font-size:27px}}
+.confetti{position:fixed;top:-20px;font-size:25px;z-index:10;animation:fall 1.4s linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
+</style>
+</head>
+<body>
+
+<div class="app">
+<header>
+<div>
+<h1>🧠 Reverse Master</h1>
+<div class="tag">JavaScript String Reverse Coding Game</div>
+</div>
+<div class="controls">
+<button class="gray" onclick="toggleLanguage()">🌐 <span id="langBtn">اردو</span></button>
+<button class="gray" onclick="resetHighScore()">🗑️ High Score Reset</button>
+</div>
+</header>
+
+<div class="stats">
+<div class="stat"><span id="tLevel">Level</span><b id="level">1</b></div>
+<div class="stat"><span id="tScore">Score</span><b id="score">0</b></div>
+<div class="stat"><span id="tHigh">High Score</span><b id="high">0</b></div>
+<div class="stat"><span id="tStreak">Streak</span><b id="streak">0</b></div>
+<div class="stat"><span id="tLives">Lives</span><b id="lives">❤️❤️❤️</b></div>
+</div>
+
+<div class="bar"><div id="timebar"></div></div>
+
+<div class="game">
+<div class="level" id="instruction">Level 1 — اس Text کو Reverse کریں</div>
+<div class="word" id="word">Hello</div>
+<input id="answer" placeholder="Reversed text یہاں لکھیں..." autocomplete="off">
+<div class="actions">
+<button onclick="checkAnswer()">✅ Check</button>
+<button class="green" onclick="showAnswer()">💡 Show Answer</button>
+<button class="red" onclick="newChallenge()">🔀 New Challenge</button>
+</div>
+<div id="message"></div>
+<div class="tip" id="tip">Tip: left, right اور temp کو یاد رکھیں 😉</div>
+</div>
+</div>
+
+<div class="overlay" id="overlay">
+<div class="modal">
+<h2 id="gameOverTitle">🎮 Game Over!</h2>
+<p id="finalText"></p>
+<button onclick="restart()">🔄 Restart Game</button>
+</div>
+</div>
+
+<script>
+let level=1,score=0,streak=0,lives=3,current="",timeLeft=10,timer=null;
+let lang="ur";
+let high=Number(localStorage.getItem("reverseHighScore")||0);
+
+const levels=[
+["Hello","Coding","Pakistan","Student","Madrassah","Computer","Awesome","Reverse"],
+["JavaScript","Web Design","HTML CSS","Imam Abu Hanifa","Coding Challenge","String Reverse","Programming"],
+["JavaScript Master","Algorithm Challenge","Madrassah Coding","Reverse This String","Frontend Developer","Amazing Programmer"],
+["Advanced JavaScript","String Manipulation","Two Pointer Algorithm","Professional Coder","Reverse Master Challenge"]
+];
+
+const $=id=>document.getElementById(id);
+
+function reverseText(s){
+    let left=0;
+    let right=s.length-1;
+    s=s.split("");
+    while(left<right){
+        let temp=s[left];
+        s[left]=s[right];
+        s[right]=temp;
+        left++;
+        right--;
+    }
+    return s.join("");
+}
+
+function newChallenge(){
+    clearInterval(timer);
+    const list=levels[Math.min(level-1,levels.length-1)];
+    current=list[Math.floor(Math.random()*list.length)];
+    $("word").textContent=current;
+    $("answer").value="";
+    $("message").textContent="";
+    $("answer").disabled=false;
+    timeLeft=Math.max(5,12-(level-1));
+    updateTime();
+    timer=setInterval(()=>{
+        timeLeft-=.1;
+        updateTime();
+        if(timeLeft<=0) timeUp();
+    },100);
+    $("answer").focus();
+    updateText();
+}
+
+function updateTime(){
+    const max=Math.max(5,12-(level-1));
+    $("timebar").style.width=Math.max(0,timeLeft/max*100)+"%";
+    $("timebar").style.background=timeLeft<3?"#ef4444":timeLeft<6?"#f59e0b":"#22c55e";
+}
+
+function checkAnswer(){
+    if(!current)return;
+    const ans=$("answer").value;
+    if(ans===reverseText(current)){
+        clearInterval(timer);
+        const bonus=10+(streak*3)+(level*5);
+        score+=bonus; streak++;
+        if(streak%3===0 && level<10) level++;
+        updateStats();
+        $("message").textContent=lang==="ur"?"🎉 درست! +"+bonus+" پوائنٹس":"🎉 Correct! +"+bonus+" points";
+        $("message").style.color="#16a34a";
+        celebrate();
+        setTimeout(newChallenge,850);
+    }else{
+        lives--;streak=0;updateStats();
+        $("message").textContent=lang==="ur"?"❌ غلط جواب!":"❌ Wrong answer!";
+        $("message").style.color="#dc2626";
+        if(lives<=0) gameOver();
+    }
+}
+
+function timeUp(){
+    clearInterval(timer);
+    lives--;streak=0;updateStats();
+    $("message").textContent=lang==="ur"?"⏰ وقت ختم!":"⏰ Time's up!";
+    $("message").style.color="#dc2626";
+    if(lives<=0) gameOver(); else setTimeout(newChallenge,900);
+}
+
+function showAnswer(){
+    $("message").textContent=(lang==="ur"?"💡 صحیح جواب: ":"💡 Answer: ")+reverseText(current);
+    $("message").style.color="#2563eb";
+}
+
+function updateStats(){
+    $("level").textContent=level;
+    $("score").textContent=score;
+    $("high").textContent=Math.max(high,score);
+    $("streak").textContent=streak;
+    $("lives").textContent="❤️".repeat(Math.max(0,lives))+"🖤".repeat(3-lives);
+    if(score>high){high=score;localStorage.setItem("reverseHighScore",high)}
+}
+
+function gameOver(){
+    clearInterval(timer);$("answer").disabled=true;
+    $("finalText").textContent=(lang==="ur"?"آپ کا Score: ":"Your Score: ")+score+
+      " | "+(lang==="ur"?"Level: ":"Level: ")+level+
+      " | "+(lang==="ur"?"High Score: ":"High Score: ")+high;
+    $("overlay").style.display="flex";
+}
+
+function restart(){
+    $("overlay").style.display="none";
+    level=1;score=0;streak=0;lives=3;updateStats();newChallenge();
+}
+
+function resetHighScore(){
+    high=0;localStorage.removeItem("reverseHighScore");updateStats();
+}
+
+function toggleLanguage(){
+    lang=lang==="ur"?"en":"ur";
+    $("langBtn").textContent=lang==="ur"?"اردو":"English";
+    updateText();
+}
+
+function updateText(){
+    $("instruction").textContent=lang==="ur"
+      ?"Level "+level+" — اس Text کو Reverse کریں"
+      :"Level "+level+" — Reverse this Text";
+    $("answer").placeholder=lang==="ur"?"Reversed text یہاں لکھیں...":"Type reversed text here...";
+    $("tip").textContent=lang==="ur"?"Tip: left, right اور temp کو یاد رکھیں 😉":"Tip: Remember left, right and temp 😉";
+    $("tLevel").textContent=lang==="ur"?"Level":"Level";
+    $("tScore").textContent=lang==="ur"?"Score":"Score";
+    $("tHigh").textContent=lang==="ur"?"High Score":"High Score";
+    $("tStreak").textContent=lang==="ur"?"Streak":"Streak";
+    $("tLives").textContent=lang==="ur"?"Lives":"Lives";
+}
+
+function celebrate(){
+    const icons=["🎉","⭐","✨","🥳","💥","🚀"];
+    for(let i=0;i<22;i++){
+        const e=document.createElement("div");
+        e.className="confetti";e.textContent=icons[Math.floor(Math.random()*icons.length)];
+        e.style.left=Math.random()*100+"vw";
+        e.style.animationDelay=Math.random()*.25+"s";
+        document.body.appendChild(e);
+        setTimeout(()=>e.remove(),1600);
+    }
+}
+
+$("answer").addEventListener("keydown",e=>{if(e.key==="Enter")checkAnswer()});
+updateStats();newChallenge();
+</script>
+</body>
+</html>'''
+
+path = Path("/mnt/data/reverse_master_coding_game.html")
+path.write_text(html, encoding="utf-8")
+print(path)
